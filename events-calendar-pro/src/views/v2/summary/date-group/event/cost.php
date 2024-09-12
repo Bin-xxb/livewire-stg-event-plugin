@@ -15,7 +15,6 @@
  *
  * @see tribe_get_event() For the format of the event object.
  */
-
 if ( empty( $event->cost ) ) {
 	return;
 }
@@ -35,7 +34,9 @@ $is_sold_out = $et_loaded && $event->tickets->sold_out();
 			title="<?php echo esc_attr( $event->title ); ?>"
 			rel="bookmark"
 			class="tribe-events-c-small-cta__text"
-		><?php echo esc_html( sprintf( __( 'Get %1$s', 'tribe-events-calendar-pro' ), tribe_get_ticket_label_plural() ) ); ?></a>
+		>
+		Attend Event
+		<?php //echo esc_html( sprintf( __( 'Get %1$s', 'tribe-events-calendar-pro' ), tribe_get_ticket_label_plural() ) ); ?></a>
 		</a>
 		<span class="tribe-events-c-small-cta__price">
 			<?php echo esc_html( $event->cost ) ?>
@@ -46,7 +47,9 @@ $is_sold_out = $et_loaded && $event->tickets->sold_out();
 			title="<?php echo esc_attr( $event->title ); ?>"
 			rel="bookmark"
 			class="tribe-events-c-small-cta__text"
-		><?php echo esc_html( sprintf( __( '%1$s now', 'tribe-events-calendar-pro' ), tribe_get_rsvp_label_singular() ) ); ?></a>
+		>
+		Attend Event
+		<?php //echo esc_html( sprintf( __( '%1$s now', 'tribe-events-calendar-pro' ), tribe_get_rsvp_label_singular() ) ); ?></a>
 		</a>
 	<?php else : ?>
 		<div class="tribe-events-c-small-cta__text">
