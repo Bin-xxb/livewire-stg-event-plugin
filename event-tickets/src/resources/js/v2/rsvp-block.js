@@ -36,6 +36,7 @@ tribe.tickets.rsvp.block = {};
 		container: '.tribe-tickets__rsvp-wrapper',
 		rsvpForm: 'form[name~="tribe-tickets-rsvp-form"]',
 		goingButton: '.tribe-tickets__rsvp-actions-button-going',
+		loginButton: '.tribe-tickets__rsvp-actions-button-going-login',
 		notGoingButton: '.tribe-tickets__rsvp-actions-button-not-going',
 		cancelButton: '.tribe-tickets__rsvp-form-button--cancel',
 		errorMessage: '.tribe-tickets__form-message--error',
@@ -60,8 +61,27 @@ tribe.tickets.rsvp.block = {};
 				data = {
 					action: 'tribe_tickets_rsvp_handle',
 					ticket_id: rsvpId,
-					step: 'going',
+					step: 'success',
+					is_going:"yes",
 				};
+
+				tribe.tickets.rsvp.manager.request( data, $container );
+			} );
+		} );
+	};
+	obj.bindLogin = function( $container ) {
+		let data = {};
+		const rsvpId = $container.data( 'rsvp-id' );
+		const $loginButton = $container.find( obj.selectors.loginButton );
+
+		$loginButton.each( function( index, button ) {
+			$( button ).on( 'click', function() {
+				data = {
+					action: 'ajax_handle_rsvp_login',
+					ticket_id: rsvpId,
+					step: 'login',
+				};
+				jQuery($container).find(".tribe-tickets__rsvp-message").remove();
 
 				tribe.tickets.rsvp.manager.request( data, $container );
 			} );
@@ -85,10 +105,15 @@ tribe.tickets.rsvp.block = {};
 				data = {
 					action: 'tribe_tickets_rsvp_handle',
 					ticket_id: rsvpId,
-					step: 'not-going',
+					step: null,
+					is_going:"no",
 				};
 
 				tribe.tickets.rsvp.manager.request( data, $container );
+				
+				
+			
+				
 			} );
 		} );
 	};
@@ -241,6 +266,7 @@ tribe.tickets.rsvp.block = {};
 	 * @return {void}
 	 */
 	obj.bindEvents = function( $container ) {
+		obj.bindLogin( $container );
 		obj.bindGoing( $container );
 		obj.bindNotGoing( $container );
 		obj.bindCancel( $container );

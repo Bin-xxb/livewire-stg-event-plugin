@@ -204,9 +204,10 @@ class Tickets implements \ArrayAccess, \Serializable {
 
 				if ( 'rsvp' === $type ) {
 					/* Translators: RSVP singular label. */
-					$link_label  = esc_html( sprintf( _x( '%s Now', 'list view rsvp now ticket button', 'event-tickets' ), tribe_get_rsvp_label_singular( 'list_view_rsvp_now_button' ) ) );
+					//$link_label  = esc_html( sprintf( _x( '%s Now', 'list view rsvp now ticket button', 'event-tickets' ), tribe_get_rsvp_label_singular( 'list_view_rsvp_now_button' ) ) );
+					$link_label  =  "Attend Event";
 					$link_anchor = '#rsvp-now';
-				} else {
+				}  else {
 					/* Translators: Tickets plural label. */
 					$link_label  = esc_html( sprintf( _x( 'Get %s', 'list view buy now ticket button', 'event-tickets' ), tribe_get_ticket_label_plural( 'list_view_buy_now_button' ) ) );
 					$link_anchor = tribe_tickets_new_views_is_enabled() ? '#tribe-tickets__tickets-form' : '#tribe-tickets';

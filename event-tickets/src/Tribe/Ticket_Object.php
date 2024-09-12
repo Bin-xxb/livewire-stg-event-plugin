@@ -344,6 +344,7 @@ if ( ! class_exists( 'Tribe__Tickets__Ticket_Object' ) ) {
 			if ( ! $end instanceof DateTime ) {
 				$end = $this->end_date();
 			}
+			
 
 			// Bail if we don't have an end date and the event has passed
 			// Check if the event has passed in case we're using TEC
@@ -364,10 +365,10 @@ if ( ! class_exists( 'Tribe__Tickets__Ticket_Object' ) ) {
 					empty( $start )
 					|| $start <= $date
 				)
-				&& (
+				/*cwiser && (
 					empty( $end )
 					|| $date <= $end
-				)
+				)*/
 			);
 		}
 

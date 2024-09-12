@@ -259,6 +259,8 @@ class Tribe__Tickets__RSVP extends Tribe__Tickets__Tickets {
 
 		$ticket_id = absint( tribe_get_request_var( 'ticket_id', 0 ) );
 		$step      = tribe_get_request_var( 'step', null );
+		
+		
 
 		$render_response = $this->render_rsvp_step( $ticket_id, $step );
 
@@ -301,6 +303,14 @@ class Tribe__Tickets__RSVP extends Tribe__Tickets__Tickets {
 		if ( 0 === $post_id ) {
 			return '';
 		}
+		if($step=="" && $_POST['is_going']=="no"){
+		 	global $current_user,$wpdb;
+	 		$checkRecord = $wpdb->get_row("select p.ID from ".$wpdb->prefix."posts as p inner join ".$wpdb->prefix."postmeta as pm on p.ID=pm.post_id  where  (pm.meta_key='_tribe_rsvp_product' and pm.meta_value='".$ticket_id."') and p.post_author='".$current_user->ID."' and p.post_status='publish' and p.post_type='tribe_rsvp_attendees'",ARRAY_A);
+			if(!empty($checkRecord)){
+				wp_delete_post($checkRecord['ID'],true);
+			}
+		}
+
 
 		/** @var \Tribe__Tickets__Editor__Blocks__Rsvp $blocks_rsvp */
 		$blocks_rsvp = tribe( 'tickets.editor.blocks.rsvp' );
@@ -326,7 +336,7 @@ class Tribe__Tickets__RSVP extends Tribe__Tickets__Tickets {
 			'threshold'  => $blocks_rsvp->get_threshold( $post_id ),
 			'going'      => tribe_get_request_var( 'going', 'yes' ),
 		];
-
+		
 		/**
 		 * Allow filtering of the template arguments used prior to processing.
 		 *
@@ -422,7 +432,7 @@ class Tribe__Tickets__RSVP extends Tribe__Tickets__Tickets {
 
 		// Add the rendering attributes into global context.
 		$template->add_template_globals( $args );
-
+		
 		$html  = $template->template( 'v2/components/loader/loader', [ 'classes' => [] ], false );
 		$html .= $template->template( 'v2/rsvp/content', $args, false );
 
@@ -496,6 +506,8 @@ class Tribe__Tickets__RSVP extends Tribe__Tickets__Tickets {
 			 * tribe_tickets[{$ticket_id}][attendees][1][meta][{$field_slug}] (previously tribe-tickets-meta[{$ticket_id}][1][{$field_slug}])
 			 */
 			$attendee_ids = $this->generate_tickets( $args['post_id'], false );
+			
+			
 
 			if ( is_wp_error( $attendee_ids ) ) {
 				$result['success']  = false;
@@ -1098,6 +1110,9 @@ class Tribe__Tickets__RSVP extends Tribe__Tickets__Tickets {
 		} elseif ( isset( $_POST['product_id'] ) ) {
 			$product_ids = (array) $_POST['product_id'];
 		}
+		 elseif ( isset( $_POST['ticket_id'] ) ) {
+			$product_ids = (array) $_POST['ticket_id'];
+		}
 
 		$product_ids = array_map( 'absint', $product_ids );
 		$product_ids = array_filter( $product_ids );
@@ -1105,6 +1120,8 @@ class Tribe__Tickets__RSVP extends Tribe__Tickets__Tickets {
 		$attendee_ids = [];
 
 		// Iterate over each product.
+		
+		
 		foreach ( $product_ids as $product_id ) {
 			$ticket_qty = $this->parse_ticket_quantity( $product_id );
 
@@ -1234,6 +1251,7 @@ class Tribe__Tickets__RSVP extends Tribe__Tickets__Tickets {
 		// fact it was sent.
 		foreach ( $all_attendees as $single_attendee ) {
 			// Do not add those attendees/tickets marked as not attending (note that despite the name
+
 			// 'qr_ticket_id', this key is not QR code specific, it's simply the attendee post ID).
 			$going_status = get_post_meta( $single_attendee['qr_ticket_id'], self::ATTENDEE_RSVP_KEY, true );
 			if ( in_array( $going_status, $this->get_statuses_by_action( 'count_not_going' ), true ) ) {
@@ -2760,6 +2778,7 @@ class Tribe__Tickets__RSVP extends Tribe__Tickets__Tickets {
 		$order_id = self::generate_order_id();
 
 		$first_attendee = [];
+		
 
 		if ( ! empty( $_POST['tribe_tickets'] ) ) {
 			$first_ticket = current( $_POST['tribe_tickets'] );
@@ -2770,6 +2789,13 @@ class Tribe__Tickets__RSVP extends Tribe__Tickets__Tickets {
 		} elseif ( isset( $_POST['attendee'] ) ) {
 			$first_attendee = $_POST['attendee'];
 		}
+		//cwiser
+		global $current_user;
+		$first_attendee['email'] =$current_user->data->user_email;
+		$first_attendee['full_name'] =$current_user->data->display_name; 
+		$first_attendee['optout']=1;
+		$first_attendee['order_status']=$_POST['is_going'];
+		 
 
 		$attendee_email        = empty( $first_attendee['email'] ) ? null : sanitize_email( $first_attendee['email'] );
 		$attendee_email        = is_email( $attendee_email ) ? $attendee_email : null;
@@ -2814,7 +2840,7 @@ class Tribe__Tickets__RSVP extends Tribe__Tickets__Tickets {
 	 * @return int Either the requested quantity of tickets or `0` in any other case.
 	 */
 	public function parse_ticket_quantity( $ticket_id ) {
-		$quantity = 0;
+		$quantity = 1;
 
 		if ( isset( $_POST['tribe_tickets'][ $ticket_id ]['quantity'] ) ) {
 			$quantity = absint( $_POST['tribe_tickets'][ $ticket_id ]['quantity'] );
