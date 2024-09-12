@@ -1,356 +1,312 @@
-var tribe_tickets_rsvp_block = {
-	events: {},
-};
+/**
+ * Makes sure we have all the required levels on the Tribe Object
+ *
+ * @since 5.0.0
+ * @type {object}
+ */
+tribe.tickets = tribe.tickets || {};
+tribe.tickets.rsvp = tribe.tickets.rsvp || {};
 
-( function( $, my ) {
-	'use strict';
+/**
+ * Configures RSVP block Object in the Global Tribe variable
+ *
+ * @since 5.0.0
+ * @type {object}
+ */
+tribe.tickets.rsvp.block = {};
 
-	my.state = {
-		submitActive: true,
+/**
+ * Initializes in a Strict env the code that manages the RSVP block.
+ *
+ * @since 5.0.0
+ * @param  {object} $   jQuery
+ * @param  {object} obj tribe.tickets.rsvp.block
+ * @return {void}
+ */
+( function( $, obj ) {
+	const $document = $( document );
+
+	/**
+	 * Selectors used for configuration and setup
+	 *
+	 * @since 5.0.0
+	 * @type {object}
+	 */
+	obj.selectors = {
+		container: '.tribe-tickets__rsvp-wrapper',
+		rsvpForm: 'form[name~="tribe-tickets-rsvp-form"]',
+		goingButton: '.tribe-tickets__rsvp-actions-button-going',
+		loginButton: '.tribe-tickets__rsvp-actions-button-going-login',
+		notGoingButton: '.tribe-tickets__rsvp-actions-button-not-going',
+		cancelButton: '.tribe-tickets__rsvp-form-button--cancel',
+		errorMessage: '.tribe-tickets__form-message--error',
+		hiddenElement: '.tribe-common-a11y-hidden',
+		displayToggle: '.tribe-tickets__rsvp-actions-success-going-toggle-input',
 	};
 
 	/**
-	 * Handle the "Going" and "Not Going" button toggle,
-	 * set them active and inactive so they can only use
-	 * one at a time.
+	 * Binds events for the going button.
 	 *
-	 * @since 4.9
-	 *
-	 * @param {obj} $button The dom object of the clicked button
+	 * @since 5.0.0
+	 * @param {jQuery} $container jQuery object of the RSVP container.
+	 * @return {void}
 	 */
-	my.tribe_rsvp_toggle_actions = function( $button ) {
-		// Check if is the going or not going button
-		var going      = $button.hasClass( 'tribe-block__rsvp__status-button--going' );
-		var sibling    = going
-			? '.tribe-block__rsvp__status-button--not-going'
-			: '.tribe-block__rsvp__status-button--going';
-		var $siblingEl = $button.closest( '.tribe-block__rsvp__status' ).find( sibling );
+	obj.bindGoing = function( $container ) {
+		let data = {};
+		const rsvpId = $container.data( 'rsvp-id' );
+		const $goingButton = $container.find( obj.selectors.goingButton );
 
-		// Add active classs to the current button
-		$button.addClass( 'tribe-active' );
-		$button.removeClass( 'tribe-inactive' );
-		$button.attr( 'disabled', 'disabled' );
+		$goingButton.each( function( index, button ) {
+			$( button ).on( 'click', function() {
+				data = {
+					action: 'tribe_tickets_rsvp_handle',
+					ticket_id: rsvpId,
+					step: 'success',
+					is_going:"yes",
+				};
 
-		// Remove the active class of the other button and disable it
-		$siblingEl.addClass( 'tribe-inactive' );
-		$siblingEl.removeClass( 'tribe-active' );
-		$siblingEl.removeAttr( 'disabled' );
+				tribe.tickets.rsvp.manager.request( data, $container );
+			} );
+		} );
+	};
+	obj.bindLogin = function( $container ) {
+		let data = {};
+		const rsvpId = $container.data( 'rsvp-id' );
+		const $loginButton = $container.find( obj.selectors.loginButton );
+
+		$loginButton.each( function( index, button ) {
+			$( button ).on( 'click', function() {
+				data = {
+					action: 'ajax_handle_rsvp_login',
+					ticket_id: rsvpId,
+					step: 'login',
+				};
+				jQuery($container).find(".tribe-tickets__rsvp-message").remove();
+
+				tribe.tickets.rsvp.manager.request( data, $container );
+			} );
+		} );
 	};
 
+	/**
+	 * Binds events for the not going button.
+	 *
+	 * @since 5.0.0
+	 * @param {jQuery} $container jQuery object of the RSVP container.
+	 * @return {void}
+	 */
+	obj.bindNotGoing = function( $container ) {
+		let data = {};
+		const rsvpId = $container.data( 'rsvp-id' );
+		const $notGoingButton = $container.find( obj.selectors.notGoingButton );
 
+		$notGoingButton.each( function( index, button ) {
+			$( button ).on( 'click', function() {
+				data = {
+					action: 'tribe_tickets_rsvp_handle',
+					ticket_id: rsvpId,
+					step: null,
+					is_going:"no",
+				};
+
+				tribe.tickets.rsvp.manager.request( data, $container );
+				
+				
+			
+				
+			} );
+		} );
+	};
 
 	/**
-	 * Handle the "Going" and "Not Going" actions.
-	 * Load the RSVP confirmation form via AJAX
+	 * Binds events for the cancel button.
 	 *
-	 * @since 4.9
-	 *
-	 * @return void
+	 * @since 5.0.0
+	 * @param {jQuery} $container jQuery object of the RSVP container.
+	 * @return {void}
 	 */
-	my.events.handle_rsvp_response = function() {
-		var $button   = $( this );
-		var $block    = $button.closest( '.tribe-block__rsvp' );
-		var $ticket   = $block.find( '.tribe-block__rsvp__ticket' );
-		var ticket_id = $ticket.data( 'rsvp-id' );
-		var going     = $button.hasClass( 'tribe-block__rsvp__status-button--going' );
+	obj.bindCancel = function( $container ) {
+		let data = {};
+		const rsvpId = $container.data( 'rsvp-id' );
+		const $cancelButton = $container.find( obj.selectors.cancelButton );
 
-		// Toggle button styles and disable
-		my.tribe_rsvp_toggle_actions( $button );
+		$cancelButton.each( function( index, button ) {
+			$( button ).on( 'click', function() {
+				if ( ! confirm( TribeRsvp.cancelText ) ) {
+					return;
+				}
 
-		// Set the AJAX params
-		var params = {
-			action: 'rsvp-form',
-			ticket_id: ticket_id,
-			going: going ? 'yes' : 'no',
+				data = {
+					action: 'tribe_tickets_rsvp_handle',
+					ticket_id: rsvpId,
+					step: null,
+				};
+
+				tribe.tickets.rsvp.manager.request( data, $container );
+			} );
+		} );
+	};
+
+	/**
+	 * Handle the RSVP toggle for listing in public attendee list.
+	 *
+	 * @since 5.0.0
+	 * @param {Event} event Input event
+	 */
+	obj.handleDisplayToggle = function( event ) {
+		event.preventDefault();
+
+		const $input = $( event.target );
+		const rsvpId = $input.data( 'rsvp-id' );
+		const checked = $input.prop( 'checked' );
+		const attendeeIds = $input.data( 'attendee-ids' );
+		const nonce = $input.data( 'opt-in-nonce' );
+		const $container = event.data.container;
+
+		const data = {
+			action: 'tribe_tickets_rsvp_handle',
+			ticket_id: rsvpId,
+			step: 'opt-in',
+			opt_in: checked,
+			opt_in_nonce: nonce,
+			attendee_ids: attendeeIds,
 		};
 
-		// Show the loader for this RSVP
-		my.tribe_rsvp_loader_start();
-
-		$.post(
-			TribeRsvp.ajaxurl,
-			params,
-			function( response ) {
-				$block.find( '.tribe-block__rsvp__message__success' ).remove();
-				var $form = $ticket.find( '.tribe-block__rsvp__form' );
-				$form.html( response.data.html );
-				if ( window.tribe_event_tickets_plus ) {
-					var $input = $form.find( 'input.tribe-tickets-quantity' );
-					window.tribe_event_tickets_plus.meta.block_set_quantity( $input, going );
-				}
-				if ( ! my.validate_submission( $form ) ) {
-					var $submit = $form.find( '.tribe-block__rsvp__submit-button' );
-					$submit.prop( 'disabled', true );
-					my.state.submitActive = false;
-				}
-				my.tribe_rsvp_loader_end();
-			}
-		);
+		tribe.tickets.rsvp.manager.request( data, $container );
 	};
 
 	/**
-	 * Handle the number input + and - actions
+	 * Handle the RSVP form submission
 	 *
-	 * @since 4.9
-	 *
-	 * @param {event} e input event
-	 */
-	my.events.handle_quantity_change = function( e ) {
-		e.preventDefault();
-		var $input   = $( this ).parent().find( 'input[type="number"]' );
-		var increase = $( this ).hasClass( 'tribe-block__rsvp__number-input-button--plus' );
-		var step = $input[ 0 ].step ? Number( $input [ 0 ].step ) : 1;
-		var originalValue = Number( $input[ 0 ].value );
-
-		// stepUp or stepDown the input according to the button that was clicked
-		// handle IE/Edge
-		if ( increase ) {
-			// we use 0 here as a shorthand for no maximum
-			var max = $input[ 0 ].max ? Number( $input[ 0 ].max ) : -1;
-
-			if ( typeof $input[ 0 ].stepUp === 'function' ) {
-				try {
-					// Bail if we're already in the max, safari has issues with stepUp() here.
-					if ( max < ( originalValue + step ) ) {
-						return;
-					}
-					$input[ 0 ].stepUp();
-				} catch ( ex ) {
-					$input[ 0 ].value = ( -1 === max || max >= originalValue + step )
-						? originalValue + step
-						: max;
-				}
-			} else {
-				$input[ 0 ].value = ( -1 === max || max >= originalValue + step )
-					? originalValue + step
-					: max;
-			}
-		} else {
-			var min = $input[ 0 ].min ? Number( $input[ 0 ].min ) : 0;
-
-			if ( typeof $input[ 0 ].stepDown === 'function' ) {
-				try {
-					$input[ 0 ].stepDown();
-				} catch ( ex ) {
-					$input[ 0 ].value = ( min <= originalValue - step )
-						? originalValue - step
-						: min;
-				}
-			} else {
-				$input[ 0 ].value = ( min <= originalValue - step )
-					? originalValue - step
-					: min;
-			}
-		}
-
-		// Trigger the on Change for the input (if it has changed) as it's not handled via stepUp() || stepDown()
-		if ( originalValue !== $input[ 0 ].value ) {
-			$input.trigger( 'change' );
-		}
-	};
-
-	/**
-	 * Handle the number input + and - actions
-	 *
-	 * @since 4.9
-	 *
-	 * @param {event} e input event
-	 */
-	my.events.handle_quantity_change_value = function( e ) {
-		e.preventDefault();
-
-		const $this = $( e.target );
-		const max = $this.attr( 'max' );
-		let maxQty = 0;
-		let newQuantity = parseInt( $this.val(), 10 );
-		newQuantity = isNaN( newQuantity ) ? 0 : newQuantity;
-
-		if ( max < newQuantity ) {
-			newQuantity = max;
-			$this.val( max );
-		}
-
-		if ( 0 > maxQty ) {
-			newQuantity += maxQty;
-			$this.val( newQuantity );
-		}
-
-		e.preventDefault();
-	};
-
-	/**
-	 * Handles the input focus event
-	 *
-	 * @since 4.10.4
-	 *
-	 * @param {event} e input event
-	 */
-	my.events.handle_input_focus = function ( e ) {
-		if ( ! my.state.submitActive ) {
-			$( e.target ).siblings( '.tribe-block__rsvp__submit-button' ).attr( 'disabled', false );
-			my.state.submitActive = true;
-		}
-	};
-
-	/**
-	 * Show the loader
-	 *
-	 * @since 4.9
-	 *
-	 * @param {obj} $ticket ticket object
-	 */
-	my.tribe_rsvp_loader_start = function( $ticket ) { // eslint-disable-line no-unused-vars
-		var loader_class = '.tribe-block__rsvp__loading';
-		var $loader = $( '.tribe-block__rsvp' ).find( loader_class );
-
-		$loader.removeClass( 'tribe-common-a11y-hidden' );
-	};
-
-	/**
-	 * Hide the loader
-	 *
-	 * @since 4.9
-	 *
-	 * @param {obj} $ticket ticket object
-	 */
-	my.tribe_rsvp_loader_end = function( $ticket ) { // eslint-disable-line no-unused-vars
-		var loader_class = '.tribe-block__rsvp__loading';
-		var $loader = $( '.tribe-block__rsvp' ).find( loader_class );
-
-		$loader.addClass( 'tribe-common-a11y-hidden' );
-	};
-
-
-
-	/**
-	 * Validates the RSVP form
-	 *
-	 * @param {obj} $form form object
-	 *
-	 * @returns {bool} is valid
-	 */
-	my.validate_submission = function( $form ) {
-		var $qty = $form.find( 'input.tribe-tickets-quantity' );
-		var $name = $form.find( 'input.tribe-tickets-full-name' );
-		var $email = $form.find( 'input.tribe-tickets-email' );
-
-		return (
-			$name.val().trim().length &&
-			$email.val().trim().length &&
-			parseInt( $qty.val(), 10 ) > 0
-		);
-	};
-
-	/**
-	 * Handle the form submission
-	 *
-	 * @since 4.9
-	 *
+	 * @since 5.0.0
 	 * @param {event} e submission event
 	 */
-	my.events.handle_submission = function( e ) {
+	obj.handleSubmission = function( e ) {
 		e.preventDefault();
 
-		var $ticket   = $( this ).closest( '.tribe-block__rsvp__ticket' );
-		var ticket_id = $ticket.data( 'rsvp-id' );
-		var $form     = $ticket.find( 'form' );
+		const $form = $( this );
+		const $container = $form.closest( obj.selectors.container );
+		const rsvpId = $form.data( 'rsvp-id' );
+		const params = $form.serializeArray();
 
-		var is_rsvp_valid = my.validate_submission( $form );
-		var is_meta_valid = true;
-		var has_tickets_plus = !! window.tribe_event_tickets_plus;
+		const data = {
+			action: 'tribe_tickets_rsvp_handle',
+			ticket_id: rsvpId,
+			step: 'success',
+		};
 
-		if ( has_tickets_plus ) {
-			is_meta_valid = window.tribe_event_tickets_plus.meta.validate_meta( $form );
-		}
+		$( params ).each( function( index, object ) {
+			data[ object.name ] = object.value;
+		} );
 
-		// Handle invalid form
-		if ( ! is_rsvp_valid || ! is_meta_valid ) {
-			is_rsvp_valid
-				? $form.find( '.tribe-block__rsvp__message__error' ).hide()
-				: $form.find( '.tribe-block__rsvp__message__error' ).show();
-			has_tickets_plus && is_meta_valid
-				? $form.find( '.tribe-event-tickets-meta-required-message' ).hide()
-				: $form.find( '.tribe-event-tickets-meta-required-message' ).show();
-
-			$( 'html, body' ).animate( {
-				scrollTop: $form.offset().top - 100,
-			}, 300 );
-		} else {
-			// Form is valid, submit form
-			var params = $form.serializeArray();
-			params.push( { name: 'action', value: 'rsvp-process' } );
-			params.push( { name: 'ticket_id', value: ticket_id } );
-
-			my.tribe_rsvp_loader_start();
-
-			$.post(
-				TribeRsvp.ajaxurl,
-				params,
-				function( response ) {
-					// Get the remaining number
-					var remaining = response.data.remaining;
-
-					// Update templates
-					$ticket
-						.find( '.tribe-block__rsvp__details .tribe-block__rsvp__availability' )
-						.replaceWith( response.data.remaining_html );
-					$ticket.find( '.tribe-block__rsvp__form' ).empty()
-					$ticket.closest( '.tribe-block__rsvp' ).append( response.data.html );
-
-					if ( 0 === remaining ) {
-						// If there are no more RSVPs remaining we update the status section
-						$ticket.find( '.tribe-block__rsvp__status' ).replaceWith( response.data.status_html );
-					}
-
-					my.tribe_rsvp_loader_end();
-				}
-			);
-		}
+		tribe.tickets.rsvp.manager.request( data, $container );
 	};
 
 	/**
-	 * Bind events to elements
-	 */
-	my.bind_events = function() {
-		$( '.tribe-block__rsvp__ticket' )
-			.on(
-				'click',
-				'.tribe-block__rsvp__status-button--going, .tribe-block__rsvp__status-button--not-going',
-				my.events.handle_rsvp_response
-			)
-			.on( 'click', 'button[type="submit"]', my.events.handle_submission )
-			.on(
-				'click',
-				'.tribe-block__rsvp__number-input-button--minus, .tribe-block__rsvp__number-input-button--plus', // eslint-disable-line max-len
-				my.events.handle_quantity_change
-			)
-			.on(
-				'change keyup',
-				'.tribe-tickets-quantity',
-				my.events.handle_quantity_change_value
-			)
-			.on(
-				'focus',
-				'.tribe-tickets-full-name, .tribe-tickets-email',
-				my.events.handle_input_focus
-			);
-	};
-
-	/**
-	 * Initialize RSVP block
+	 * Binds events for the RSVP form.
 	 *
-	 * @since 4.9
+	 * @since 5.0.0
+	 * @param {jQuery} $container jQuery object of the RSVP container.
+	 * @return {void}
 	 */
-	my.init = function() {
-		var tribe_rsvp = $( '.tribe-block__rsvp' );
+	obj.bindForm = function( $container ) {
+		const $rsvpForm = $container.find( obj.selectors.rsvpForm );
 
-		if ( ! tribe_rsvp.length ) {
-			return;
-		}
-
-		my.bind_events();
+		$rsvpForm.each( function( index, form ) {
+			$( form ).on( 'submit', obj.handleSubmission );
+		} );
 	};
 
-	// Initialize
-	my.init();
-} )( jQuery, tribe_tickets_rsvp_block );
+	/**
+	 * Binds events for the display in public attendee toggle.
+	 *
+	 * @since 5.0.0
+	 * @param {jQuery} $container jQuery object of the RSVP container.
+	 * @return {void}
+	 */
+	obj.bindDisplayToggle = function( $container ) {
+		const $displayToggle = $container.find( obj.selectors.displayToggle );
+
+		$displayToggle.on(
+			'input',
+			{ container: $container },
+			obj.handleDisplayToggle,
+		);
+	};
+
+	/**
+	 * Unbinds events.
+	 *
+	 * @since 5.0.0
+	 * @param  {Event}       event    event object for 'beforeAjaxSuccess.tribeTicketsRsvp' event
+	 * @param  {jqXHR}       jqXHR    Request object
+	 * @param  {object}      settings Settings that this request was made with
+	 * @return {void}
+	 */
+	obj.unbindEvents = function( event, jqXHR, settings ) { // eslint-disable-line no-unused-vars
+		const $container = event.data.container;
+		const $goingButton = $container.find( obj.selectors.goingButton );
+		const $notGoingButton = $container.find( obj.selectors.notGoingButton );
+		const $cancelButton = $container.find( obj.selectors.cancelButton );
+		const $rsvpForm = $container.find( obj.selectors.rsvpForm );
+		const $displayToggle = $container.find( obj.selectors.displayToggle );
+
+		$goingButton.off();
+		$notGoingButton.off();
+		$cancelButton.off();
+		$rsvpForm.off();
+		$displayToggle.off();
+	};
+
+	/**
+	 * Binds events for container.
+	 *
+	 * @since 5.0.0
+	 * @param {jQuery}  $container jQuery object of object of the RSVP container.
+	 * @return {void}
+	 */
+	obj.bindEvents = function( $container ) {
+		obj.bindLogin( $container );
+		obj.bindGoing( $container );
+		obj.bindNotGoing( $container );
+		obj.bindCancel( $container );
+		obj.bindForm( $container );
+		obj.bindDisplayToggle( $container );
+
+		$container.on(
+			'beforeAjaxSuccess.tribeTicketsRsvp',
+			{ container: $container },
+			obj.unbindEvents,
+		);
+	};
+
+	/**
+	 * Initialize RSVP events.
+	 *
+	 * @since 5.0.0
+	 * @param {Event}   event      event object for 'afterSetup.tribeTicketsRsvp' event
+	 * @param {number}  index      jQuery.each index param from 'afterSetup.tribeTicketsRsvp' event.
+	 * @param {jQuery}  $container jQuery object of view container.
+	 * @return {void}
+	 */
+	obj.init = function( event, index, $container ) {
+		obj.bindEvents( $container );
+	};
+
+	/**
+	 * Handles the initialization of the RSVP block events when Document is ready.
+	 *
+	 * @since 5.0.0
+	 * @return {void}
+	 */
+	obj.ready = function() {
+		$document.on(
+			'afterSetup.tribeTicketsRsvp',
+			tribe.tickets.rsvp.manager.selectors.container,
+			obj.init,
+		);
+	};
+
+	// Configure on document ready.
+	$( obj.ready );
+} )( jQuery, tribe.tickets.rsvp.block );
